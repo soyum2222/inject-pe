@@ -30,6 +30,8 @@ Enter:
 
     ; do any thing
 
+	push 		dword[ebp - 0x04]
+	push        dword[ebp - 0x0c]
 	mov         eax , SIZE
 	add         eax , [ebp - 0x08]
 	call        eax
