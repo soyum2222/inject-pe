@@ -29,7 +29,9 @@ Enter:
 	mov         [ebp - 0x0c] , eax
 
     ; do any thing
-
+	mov         ebx , [ebp - 0x08]
+	add         ebx , SIZE
+	push        ebx
 	push 		dword[ebp - 0x04]
 	push        dword[ebp - 0x0c]
 	mov         eax , SIZE
@@ -37,16 +39,16 @@ Enter:
 	call        eax
 
 
-	push        .name
-	push        dword[ebp - 0x08]
-	push        dword[ebp - 0x0c]
-	call        GetFuncAddress
-	leave
-	ret
+;	push        .name
+;	push        dword[ebp - 0x08]
+;	push        dword[ebp - 0x0c]
+;	call        GetFuncAddress
+;	leave
+;	ret
 
     
 
-	mov         eax , [ebp]
+	mov         eax , [ebp - 0x04]
 	add         eax , ORIGIN_ENTER
 	leave
 	jmp         eax
@@ -62,13 +64,12 @@ getOffsetAddr:
     sub         eax , 0x0A
     ret         4
 
-
 ; get the PE base address on runtime
 ; base address value store in eax
 getBaseAddr:
 	mov         eax , [esp]
 	sub         eax , [esp + 0x04]
-	sub         eax , NEW_ENTER+5 ;new entry point +5
+	sub         eax , NEW_ENTER+0x0A;new entry point +5
 	ret         4
 
 ; get kernal32 address

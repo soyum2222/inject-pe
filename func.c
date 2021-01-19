@@ -1,5 +1,30 @@
+//#include <windows.h>
 typedef unsigned long       DWORD;
 typedef unsigned short      WORD;
+
+//BOOL CreateDirectory(LPCTSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+
+DWORD getFuncAddress(char *funcName , DWORD k32Address);
+
+DWORD entry(DWORD k32Address,DWORD baseAddress,DWORD offset){
+
+	char *funcName="CreateDirectoryA";
+
+	DWORD addr = getFuncAddress(funcName+offset,k32Address);
+
+	addr +=k32Address;
+	int (*foo)(char* , int) =0;
+
+    foo = (int (*)(char*,int))addr;
+
+    char *dir ="D:\\asm\\foo";
+
+	dir += offset;
+
+    foo(dir,0);
+
+	return 0x00;
+}
 
 typedef struct _IMAGE_EXPORT_DIRECTORY {
     DWORD   Characteristics;
@@ -18,7 +43,7 @@ typedef struct _IMAGE_EXPORT_DIRECTORY {
 
 
 DWORD getNTHead(DWORD k32Address){
-	return k32Address+0x3c;
+	return *(DWORD *)(k32Address+0x3c);
 }
 
 DWORD getOptHead32(DWORD k32Address){
@@ -54,7 +79,7 @@ DWORD getFuncAddress(char *funcName , DWORD k32Address){
     for (int i=0;i<export->NumberOfFunctions;i++){
 
         DWORD offset = i*4;
-        offset += export->AddressOfFunctions;
+        offset += export->AddressOfNames;
         offset += k32Address;
         offset = *(DWORD *)offset;
         offset += k32Address;
@@ -72,25 +97,16 @@ DWORD getFuncAddress(char *funcName , DWORD k32Address){
                 orderOffset += export->AddressOfNameOrdinals;
                 orderOffset += k32Address;
 
-                WORD num = (WORD *)orderOffset;
+                WORD num = *(WORD *)orderOffset;
 
                 DWORD funcAddr = num;
                 funcAddr *= 4;
                 funcAddr +=export->AddressOfFunctions;
                 funcAddr += k32Address;
-                funcAddr = (DWORD *)funcAddr;
+                funcAddr = *(DWORD *)funcAddr;
                 return funcAddr;
             }
         }
     }
     return 0;
 }
-
-
-DWORD entry(DWORD k32Address,DWORD baseAddress){
-	char *funcName="CreateDirectoryA";
-	return getFuncAddress(funcName,k32Address);
-	//return 0x00;
-}
-
-
