@@ -5,7 +5,28 @@ ifdef OS
 	OBJCOPY =objcopy.exe
 	BOOTSIZE =0
 
-#	LDFLAG =-melf_386 -Ttext 0x00 -Trodata 0x100 -e entry -o func.bin func.o
+	a=$(shell nasm.exe -dNEW_ENTER=0xff -dORIGIN_ENTER=0xff -dSIZE=0xff -f bin -o boot.bin boot.asm)
+	b=$(shell gcc.exe -fno-pie -m32 -c -o func.o func.c)
+
+	ifeq ($(a),)
+		ifeq ($(b),)
+			TEXESIZE =$(shell objdump.exe -h func.o|grep .text |awk '{print $$3}')
+			RODATASIZE =$(shell objdump.exe -h func.o|grep .rdata |awk '{print $$3}')
+			SIZE = $(shell ls -l|grep boot.bin |awk '{print $$5}')
+		endif
+	endif
+
+	ifeq ($(RODATASIZE),)
+		LDFLAG =-mi386pe -Ttext 0x00 -e _entry -o func.bin func.o
+		OBJCOPYFLAG =-O binary -j .text func.bin
+	else
+		HEXTEXESIZE = $(shell  printf %d 0x$(TEXESIZE))
+		RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 16)
+		HEXRODATABEGIN = 0x$(shell  printf %x $(RODATABEGIN))
+		LDFLAG =-mi386pe --section-start=.text=0x00 --section-start=.rdata=$(HEXRODATABEGIN) -e _entry -o func.bin func.o
+		OBJCOPYFLAG =-O binary -j .text -j .rdata func.bin
+	endif
+
 else
 	GCC =gcc
 	LD =ld
@@ -18,26 +39,25 @@ else
 		ifeq ($(b),)
 			TEXESIZE =$(shell objdump -h func.o|grep .text |awk '{print $$3}')
 			RODATASIZE =$(shell objdump -h func.o|grep .rodata |awk '{print $$3}')
-			SIZE = $(shell ls -l|grep boot.bin |awk '{print $$5}')
+			SIZE = 0x$(shell ls -l|grep boot.bin |awk '{print $$5}')
 		endif
 	endif
 
 
 	ifeq ($(RODATASIZE),)
-		LDFLAG =-melf_i386 -Ttext 0x00 -e entry -o func.bin func.o
+		LDFLAG =-melf_i386 --section-start=.text=0x00 -e entry -o func.bin func.o
 		OBJCOPYFLAG =-O binary -j .text func.bin
 	else
 		HEXTEXESIZE = $(shell  printf %d 0x$(TEXESIZE))
 		RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 16)
 		HEXRODATABEGIN = 0x$(shell  printf %x $(RODATABEGIN))
-		LDFLAG =-melf_i386 -Ttext 0x00 -Trodata $(HEXRODATABEGIN) -e entry -o func.bin func.o
+		LDFLAG =-melf_i386 --section-start=.text=0x00 --section-start=.rodata=$(HEXRODATABEGIN) -e entry -o func.bin func.o
 		OBJCOPYFLAG =-O binary -j .text -j .rodata func.bin
 	endif
 
 endif
 
 build:boot func link
-
 
 boot:
 ifeq ($(NEW_ENTER), )
