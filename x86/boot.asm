@@ -10,7 +10,6 @@ BITS 32
 	call getBaseAddr
 %endmacro
 
-
 	jmp Enter
 
 

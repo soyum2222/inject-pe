@@ -18,6 +18,7 @@ func main() {
 		i      string
 		e      bool
 		hex    bool
+		ne     bool
 	)
 
 	flag.StringVar(&f, "f", "", "PE file path")
@@ -27,8 +28,35 @@ func main() {
 	flag.StringVar(&i, "i", "", "binary file path")
 	flag.BoolVar(&e, "e", false, "entry point")
 	flag.BoolVar(&hex, "hex", false, "print hexadecimal")
+	flag.BoolVar(&ne, "ne", false, "new entry point")
 
 	flag.Parse()
+
+	if ne {
+		desFile, err := ioutil.ReadFile(f)
+		if err != nil {
+			panic(err)
+		}
+		pe := editPE.PE{}
+		pe.Parse(desFile)
+
+		pe.AddSection(".foo", 0x10)
+		for i := 0; i < len(pe.ImageSectionHeaders); i++ {
+			if pe.ImageSectionHeaders[i].Name[0] == '.' &&
+				pe.ImageSectionHeaders[i].Name[1] == 'f' &&
+				pe.ImageSectionHeaders[i].Name[2] == 'o' &&
+				pe.ImageSectionHeaders[i].Name[3] == 'o' {
+
+				entry := pe.ImageSectionHeaders[i].VirtualAddress
+
+				if hex {
+					fmt.Printf("%x\n", entry)
+				} else {
+					fmt.Println(entry)
+				}
+			}
+		}
+	}
 
 	if e {
 		desFile, err := ioutil.ReadFile(f)
