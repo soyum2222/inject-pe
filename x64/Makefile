@@ -39,7 +39,7 @@ else
 		ifeq ($(b),)
 			TEXESIZE =$(shell objdump -h func.o|grep .text |awk '{print $$3}')
 			RODATASIZE =$(shell objdump -h func.o|grep .rodata |awk '{print $$3}')
-			SIZE = 0x$(shell ls -l|grep boot.bin |awk '{print $$5}')
+			SIZE = $(shell ls -l|grep boot.bin |awk '{print $$5}')
 		endif
 	endif
 
@@ -67,7 +67,7 @@ else
 endif
 
 func:boot.bin
-	$(GCC) -fno-pie -fno-stack-protector -m64 -c -o func.o func.c
+	$(GCC)  -fno-stack-protector -c -o func.o func.c
 	$(LD)  $(LDFLAG)
 	$(OBJCOPY) $(OBJCOPYFLAG)
 

@@ -31,9 +31,10 @@ ENTRY:
 	mov         [rbp - 0x18] , rax
 
     ; do any thing
-	push 		qword[rbp - 0x10]
-	push        qword[rbp - 0x08]
-	push        qword[rbp - 0x18]
+    ; for abi
+	mov 		rdx , qword[rbp - 0x10]
+	mov			rsi , qword[rbp - 0x08]
+	mov 		rdi , qword[rbp - 0x18]
 	mov         rax , SIZE
 	add         rax , [rbp - 0x10]
 	call        rax
@@ -47,7 +48,7 @@ ENTRY:
 getOffsetAddr:
     mov         rax , [rsp]
     sub         rax , [rsp + 0x08]
-    sub         rax , 0x0E
+    sub         rax , 0x0A
     ret         8
 
 ; get the PE base address on runtime
@@ -55,5 +56,5 @@ getOffsetAddr:
 getBaseAddr:
 	mov         rax , [rsp]
 	sub         rax , [rsp + 0x08]
-	sub         rax , NEW_ENTER+0x0E;new entry point +5
+	sub         rax , NEW_ENTER+0x0A;new entry point +10
 	ret         8

@@ -3,8 +3,11 @@ typedef unsigned short      WORD;
 typedef long long           QWORD;
 
 
+
+
 QWORD findDll(QWORD pebAddr ,char *name);
 DWORD getFuncAddress(char *funcName , DWORD k32Address);
+
 
 QWORD entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
 
