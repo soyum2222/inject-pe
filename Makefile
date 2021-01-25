@@ -13,8 +13,6 @@ else
 	./editPE.exe -inject -i ./x64/inject.bin -f $(FILE) -o ./a.exe
 endif
 
-
-
 init:editPE.exe
 	$(eval NEW_ENTER=$(shell ./editPE.exe -ne -hex -f $(FILE)))
 	$(eval ORIGIN_ENTER=$(shell ./editPE.exe -e -hex -f $(FILE)))
@@ -24,7 +22,4 @@ editPE.exe:
 	cd tool && $(GO) build -o ../editPE.exe editPE.go
 
 clean:
-	rm -r ./x64/*.bin
-	rm -r ./x64/*.o
-	rm -r ./x86/*.bin
-	rm -r ./x86/*.o
+	rm -r ./x64/*.bin || rm -r ./x64/*.o || rm -r ./x86/*.bin || rm -r ./x86/*.o

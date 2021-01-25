@@ -1,4 +1,4 @@
-typedef unsigned long       DWORD;
+typedef unsigned int        DWORD;
 typedef unsigned short      WORD;
 typedef long long           QWORD;
 
@@ -6,14 +6,41 @@ typedef long long           QWORD;
 
 
 QWORD findDll(QWORD pebAddr ,char *name);
-DWORD getFuncAddress(char *funcName , DWORD k32Address);
-
+DWORD getFuncAddress(char *funcName , QWORD k32Address);
 
 QWORD entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
 
 	QWORD k32Address = 0 ;
-	char name[]="KERNEL32.DLL";
-	k32Address = findDll(pebAddr,name);
+	char kernelStr[]="KERNEL32.DLL";
+	k32Address = findDll(pebAddr,kernelStr);
+
+	char loadLibStr[]="LoadLibraryA";
+	QWORD llibAddr = getFuncAddress(loadLibStr,k32Address);
+	llibAddr+=baseAddress;
+
+	char getProcStr []="GetProcAddress";
+	QWORD gpAddr= getFuncAddress(getProcStr,k32Address);
+	gpAddr+=baseAddress;
+
+    DWORD(*LoadLibraryA)(char*);
+    LoadLibraryA = (DWORD(*)(char*))(llibAddr);
+
+    DWORD(*GetProcAddress)(DWORD,char*);
+    GetProcAddress = (DWORD(*)(DWORD,char*))(gpAddr);
+
+    char userStr[]="User32.dll";
+    DWORD u32dll = LoadLibraryA(userStr);
+
+    char boxStr[]="MessageBox";
+    QWORD box = GetProcAddress(boxStr,k32Address);
+
+    QWORD (*MessageBox)(int,char *,char *,unsigned int);
+    MessageBox = (QWORD (*)(int,char *,char *,unsigned int))(box);
+
+    char lpText[]="inject";
+    MessageBox(0,lpText,lpText,0x00000002L);
+
+    return 0;
 }
 
 QWORD findDll(QWORD pebAddr ,char *name) {
@@ -96,21 +123,21 @@ typedef struct _IMAGE_EXPORT_DIRECTORY {
 
 
 
-DWORD getNTHead(DWORD k32Address){
+DWORD getNTHead(QWORD k32Address){
 	return *(DWORD *)(k32Address+0x3c);
 }
 
-DWORD getOptHead32(DWORD k32Address){
+DWORD getOptHead64(QWORD k32Address){
 	return getNTHead(k32Address)+0x18;
 }
 
-DWORD getDataDir(DWORD k32Address){
-	return getOptHead32(k32Address)+0x60;
+DWORD getDataDir(QWORD k32Address){
+	return getOptHead64(k32Address)+0x70;
 }
 
-struct _IMAGE_EXPORT_DIRECTORY * getExportDir(DWORD k32Address){
+struct _IMAGE_EXPORT_DIRECTORY * getExportDir(QWORD k32Address){
 
-	DWORD addr = getDataDir(k32Address);
+	QWORD addr = getDataDir(k32Address);
 
 	addr += k32Address;
 
@@ -125,20 +152,21 @@ struct _IMAGE_EXPORT_DIRECTORY * getExportDir(DWORD k32Address){
 	return export;
 }
 
-DWORD getFuncAddress(char *funcName , DWORD k32Address){
+DWORD getFuncAddress(char *funcName , QWORD k32Address){
 
 
     struct _IMAGE_EXPORT_DIRECTORY *export  = getExportDir(k32Address);
 
     for (int i=0;i<export->NumberOfFunctions;i++){
 
-        DWORD offset = i*4;
+        QWORD offset = i*4;
         offset += export->AddressOfNames;
         offset += k32Address;
-        offset = *(DWORD *)offset;
-        offset += k32Address;
 
-        char *ent = (char *)(offset);
+        QWORD entOffset = *(DWORD *)offset;
+        entOffset += k32Address;
+
+        char *ent = (char *)(entOffset);
 
         for (int j=0;;j++){
 
@@ -147,13 +175,13 @@ DWORD getFuncAddress(char *funcName , DWORD k32Address){
             }
 
             if (ent[j]=='\0'){
-                DWORD orderOffset =i*2;
+                QWORD orderOffset =i*2;
                 orderOffset += export->AddressOfNameOrdinals;
                 orderOffset += k32Address;
 
                 WORD num = *(WORD *)orderOffset;
 
-                DWORD funcAddr = num;
+                QWORD funcAddr = num;
                 funcAddr *= 4;
                 funcAddr +=export->AddressOfFunctions;
                 funcAddr += k32Address;

@@ -32,9 +32,9 @@ ENTRY:
 
     ; do any thing
     ; for abi
-	mov 		rdx , qword[rbp - 0x10]
-	mov			rsi , qword[rbp - 0x08]
-	mov 		rdi , qword[rbp - 0x18]
+	mov         rdx , qword[rbp - 0x10]
+	mov         rsi , qword[rbp - 0x08]
+	mov         rdi , qword[rbp - 0x18]
 	mov         rax , SIZE
 	add         rax , [rbp - 0x10]
 	call        rax
