@@ -3,68 +3,52 @@ ifdef OS
 	LD =ld.exe
 	NASM =nasm.exe
 	OBJCOPY =objcopy.exe
+	OBJDUMP =objdump.exe
 	BOOTSIZE =0
-
-	a=$(shell nasm.exe -dNEW_ENTER=0xff -dORIGIN_ENTER=0xff -dSIZE=0xff -f bin -o boot.bin boot.asm)
-	b=$(shell gcc.exe -fno-stack-protector -fno-pie -m64 -c -o func.o func.c)
-
-	ifeq ($(a),)
-		ifeq ($(b),)
-			TEXESIZE =$(shell objdump.exe -h func.o|grep .text |awk '{print $$3}')
-			RODATASIZE =$(shell objdump.exe -h func.o|grep .rdata |awk '{print $$3}')
-			SIZE = $(shell ls -l|grep boot.bin |awk '{print $$5}')
-		endif
-	endif
-
-	ifeq ($(RODATASIZE),)
-		LDFLAG = -Ttext 0x00 -e entry -o func.bin func.o
-		OBJCOPYFLAG =-O binary -j .text func.bin
-	else
-		HEXTEXESIZE = $(shell  printf %d 0x$(TEXESIZE))
-		RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 64)
-		HEXRODATABEGIN = 0x$(shell  printf %x $(RODATABEGIN))
-		LDFLAG = --section-start=.text=0x00 --section-start=.rdata=$(HEXRODATABEGIN) -e entry -o func.bin func.o
-		OBJCOPYFLAG =-O binary -j .text -j .rdata func.bin
-	endif
-
+	RDATA =.rdata
 else
 	GCC =gcc
 	LD =ld
 	NASM =nasm
 	OBJCOPY =objcopy
-	a=$(shell nasm -dNEW_ENTER=0xff -dORIGIN_ENTER=0xff -dSIZE=0xff -f bin -o boot.bin boot.asm)
-	b=$(shell gcc -fno-stack-protector -fno-pie -m64 -c -o func.o func.c)
+	OBJDUMP =objdump
+	BOOTSIZE =0
+	RDATA =.rodata
+endif
 
-	ifeq ($(a),)
-		ifeq ($(b),)
-			TEXESIZE =$(shell objdump -h func.o|grep .text |awk '{print $$3}')
-			RODATASIZE =$(shell objdump -h func.o|grep .rodata |awk '{print $$3}')
-			SIZE = $(shell ls -l|grep boot.bin |awk '{print $$5}')
-		endif
-	endif
+ifndef NEW_ENTER
+NEW_ENTER=0
+endif
 
+ifndef ORIGIN_ENTER
+ORIGIN_ENTER=0
+endif
 
-	ifeq ($(RODATASIZE),)
-		LDFLAG = --section-start=.text=0x00 -e entry -o func.bin func.o
-		OBJCOPYFLAG =-O binary -j .text func.bin
-	else
-		HEXTEXESIZE = $(shell  printf %d 0x$(TEXESIZE))
-		RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 16)
-		HEXRODATABEGIN = 0x$(shell  printf %x $(RODATABEGIN))
-		LDFLAG = --section-start=.text=0x00 --section-start=.rodata=$(HEXRODATABEGIN) -e entry -o func.bin func.o
-		OBJCOPYFLAG =-O binary -j .text -j .rodata func.bin
-	endif
-
+ifndef SIZE
+SIZE=0
 endif
 
 build:boot func link
 
-boot:
-ifeq ($(NEW_ENTER), )
-	$(NASM) -dNEW_ENTER=0 -dORIGIN_ENTER=0 -dSIZE=$(SIZE) -f bin -o boot.bin boot.asm
-else
+boot: init
 	$(NASM) -dNEW_ENTER=$(NEW_ENTER) -dORIGIN_ENTER=$(ORIGIN_ENTER) -dSIZE=$(SIZE) -f bin -o boot.bin boot.asm
-endif
+
+init:boot.bin func.o
+	$(eval TEXESIZE=$(shell $(OBJDUMP) -h func.o|grep .text |awk '{print $$3}'))
+	$(eval RODATASIZE =$(shell $(OBJDUMP) -h func.o|grep $(RDATA) |awk '{print $$3}'))
+	$(eval SIZE = $(shell ls -l|grep boot.bin |awk '{print $$5}'))
+	$(eval HEXTEXESIZE = $(shell  printf %d 0x$(TEXESIZE)))
+	$(eval RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 32))
+	$(eval HEXRODATABEGIN = 0x$(shell  printf %x $(RODATABEGIN)))
+	$(eval LDFLAG = $(if $(RODATASIZE), --section-start=.text=0x00 --section-start=$(RDATA)=$(HEXRODATABEGIN) -e entry -o func.bin func.o , --section-start=.text=0x00 -e entry -o func.bin func.o))
+	$(eval OBJCOPYFLAG = $(if $(RODATASIZE), -O binary -j .text -j $(RDATA) func.bin , -O binary -j .text func.bin))
+
+
+boot.bin:
+	$(NASM) -dNEW_ENTER=0xff -dORIGIN_ENTER=0xff -dSIZE=0xff -f bin -o boot.bin boot.asm
+
+func.o:
+	$(GCC) -fno-pie -m32 -c -o func.o func.c
 
 func:boot.bin
 	$(GCC) -fno-stack-protector -fno-pie -m64 -c -o func.o func.c
@@ -74,7 +58,3 @@ func:boot.bin
 link:func.bin
 	cat boot.bin > inject.bin
 	cat func.bin >> inject.bin
-
-clean:
-	rm func.o inject.bin func.bin boot.bin
-

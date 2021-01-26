@@ -11,6 +11,15 @@ QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
 	char kernelStr[]="KERNEL32.DLL";
 	k32Address = findDll(pebAddr,kernelStr);
 
+	if (k32Address == 0 ){
+		char kernelBaseStr[]="KERNELBASE.DLL";
+    	k32Address = findDll(pebAddr,kernelBaseStr);
+
+    	if (k32Address == 0 ){
+ 		   	return 0 ;
+    	}
+	}
+
 	char loadLibStr[]="LoadLibraryA";
 	QWORD llibAddr = getFuncAddress(loadLibStr,k32Address);
 	llibAddr+=k32Address;
@@ -29,14 +38,14 @@ QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
     char userStr[]="User32.dll";
     HMODULE u32dll = loadLibraryA(userStr);
 
-    char boxStr[]="MessageBoxW";
+    char boxStr[]="MessageBoxA";
     QWORD box = getProcAddress(u32dll,boxStr);
 
-    typedef WINUSERAPI int (WINAPI *MessageBoxW)(_In_opt_ HWND hWnd,_In_opt_ LPCWSTR lpText,_In_opt_ LPCWSTR lpCaption,_In_ UINT uType);
-    MessageBoxW messageBoxW = (MessageBoxW)(box);
+    typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCWSTR lpText,_In_opt_ LPCWSTR lpCaption,_In_ UINT uType);
+    MessageBoxA messageBoxA = (MessageBoxA)(box);
 
-    char lpText[]="inject";
-    messageBoxW(0,lpText,lpText,0x00000002L);
+    LPCWSTR *lpText="inject";
+    messageBoxA(0,lpText,lpText,0x00000002L);
 
     return 0;
 }

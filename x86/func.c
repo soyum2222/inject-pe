@@ -1,31 +1,125 @@
-//#include <windows.h>
+#include "peb.h"
 typedef unsigned long       DWORD;
 typedef unsigned short      WORD;
 
-//BOOL CreateDirectory(LPCTSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
-
 DWORD getFuncAddress(char *funcName , DWORD k32Address);
+DWORD findDll(DWORD pebAddr, char *name);
 
-DWORD entry(DWORD k32Address,DWORD baseAddress,DWORD offset){
+DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset){
 
-	char *funcName="CreateDirectoryA";
+    DWORD k32Address = 0 ;
+	char kernelStr[]="KERNEL32.DLL";
+	k32Address = findDll(pebAddr,kernelStr);
 
-	DWORD addr = getFuncAddress(funcName+offset,k32Address);
+	if (k32Address == 0 ){
+		char kernelBaseStr[]="KERNELBASE.DLL";
+    	k32Address = findDll(pebAddr,kernelBaseStr);
 
-	addr +=k32Address;
-	int (*foo)(char* , int) =0;
+    	if (k32Address == 0 ){
+ 		   	return 0 ;
+    	}
+	}
 
-    foo = (int (*)(char*,int))addr;
+	char loadLibStr[]="LoadLibraryA";
+	DWORD llibAddr = getFuncAddress(loadLibStr,k32Address);
+	llibAddr+=k32Address;
 
-    char *dir ="D:\\asm\\foo";
+	char getProcStr []="GetProcAddress";
+	DWORD gpAddr= getFuncAddress(getProcStr,k32Address);
+	gpAddr+=k32Address;
 
-	dir += offset;
+	//DWORD(*LoadLibraryA)(char*);
+	typedef WINBASEAPI _Ret_maybenull_ HMODULE (WINAPI *LoadLibraryA)(_In_ LPCSTR );
+    LoadLibraryA loadLibraryA= (LoadLibraryA)(llibAddr);
 
-    foo(dir,0);
+    typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
+    GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
 
-	return 0x00;
+    char userStr[]="User32.dll";
+    HMODULE u32dll = loadLibraryA(userStr);
+
+    char boxStr[]="MessageBoxA";
+    DWORD box = getProcAddress(u32dll,boxStr);
+    typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCSTR lpText,_In_opt_ LPCSTR lpCaption,_In_ UINT uType);
+//    typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCWSTR lpText,_In_opt_ LPCWSTR lpCaption,_In_ UINT uType);
+    MessageBoxA messageBoxA = (MessageBoxA)(box);
+
+    char lpText[]="inject";
+    messageBoxA(0,lpText,lpText,0x00000002L);
+
+    return 0;
 }
 
+DWORD findDll(DWORD pebAddr, char *name) {
+
+    int nameLen = 0;
+
+    for (int i = 0; name[i] != '\0'; i++) {
+        nameLen++;
+    }
+
+    PPEB peb;
+    peb = (PPEB) pebAddr;
+
+    PPEB_LDR_DATA pldr;
+
+    pldr = (peb->Ldr);
+
+    LIST_ENTRY inMemoryOrderModuleList;
+
+    inMemoryOrderModuleList = pldr->InMemoryOrderModuleList;
+
+    PLIST_ENTRY flink;
+    flink = inMemoryOrderModuleList.Flink;
+
+    for (int loop = 0; loop < 10; loop++) {
+
+        PLDR_DATA_TABLE_ENTRY table;
+        table = (PLDR_DATA_TABLE_ENTRY) flink;
+
+        short length;
+        length = (short) (table->FullDllName.Length);
+
+        char *dllName;
+
+        dllName = (char *) (table->FullDllName.Buffer);
+
+        if (dllName == 0) {
+            break;
+        }
+
+        int index = 0;
+        for (int i = 0; i < length; i++) {
+
+            if (dllName[i] == 0) {
+                continue;
+            }
+
+            if (name[index] == dllName[i] ||
+                name[index] == (dllName[i] - ('a' - 'A')) ||
+                name[index] == (dllName[i] + ('a' - 'A'))
+                    ) {
+                index++;
+
+                if (index == nameLen) {
+                    // find dll
+                    DWORD dllAddr = 0;
+
+                    dllAddr = (DWORD ) (table->Reserved2[0]);
+                    return dllAddr;
+                }
+            } else {
+                break;
+            }
+        }
+
+        inMemoryOrderModuleList = *(LIST_ENTRY *) (flink->Flink);
+        flink = (inMemoryOrderModuleList.Flink);
+    }
+
+    return 0;
+}
+/*
 typedef struct _IMAGE_EXPORT_DIRECTORY {
     DWORD   Characteristics;
     DWORD   TimeDateStamp;
@@ -39,7 +133,7 @@ typedef struct _IMAGE_EXPORT_DIRECTORY {
     DWORD   AddressOfNames;         // RVA from base of image
     DWORD   AddressOfNameOrdinals;  // RVA from base of image
 };
-
+*/
 
 
 DWORD getNTHead(DWORD k32Address){

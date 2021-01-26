@@ -24,7 +24,10 @@ Enter:
 	OFFSET
 	mov         [ebp - 0x08] , eax
 
-	call        GetKernel32Addr
+;	call        GetKernel32Addr
+;	mov         [ebp - 0x0c] , eax
+	;PEB
+	mov         eax , [fs:0x30]
 	mov         [ebp - 0x0c] , eax
 
     ; do any thing
@@ -73,17 +76,17 @@ getBaseAddr:
 
 ; get kernal32 address
 ; address store in eax
-GetKernel32Addr:
-    mov         eax , [fs:0x030]
-    test        eax , eax
-    js          finished
-    mov         eax , [eax + 0x0c]
-    mov         eax , [eax + 0x14]
-    mov         eax , [eax]
-    mov         eax , [eax]
-    mov         eax , [eax + 0x10]
-    finished:
-    ret
+;GetKernel32Addr:
+;    mov         eax , [fs:0x030]
+;    test        eax , eax
+;    js          finished
+;    mov         eax , [eax + 0x0c]
+;    mov         eax , [eax + 0x14]
+;    mov         eax , [eax]
+;    mov         eax , [eax]
+;    mov         eax , [eax + 0x10]
+;    finished:
+;    ret
 
 ; get NT header
 ; NT header address store in eax
