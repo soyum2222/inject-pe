@@ -7,13 +7,13 @@ ifdef OS
 	BOOTSIZE =0
 	RDATA =.rdata
 else
-	GCC =gcc
-	LD =ld
+	GCC =x86_64-w64-mingw32-gcc
+	LD =x86_64-w64-mingw32-ld
 	NASM =nasm
-	OBJCOPY =objcopy
-	OBJDUMP =objdump
+	OBJCOPY =x86_64-w64-mingw32-objcopy
+	OBJDUMP =x86_64-w64-mingw32-objdump
 	BOOTSIZE =0
-	RDATA =.rodata
+	RDATA =.rdata
 endif
 
 ifndef NEW_ENTER

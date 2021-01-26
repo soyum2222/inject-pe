@@ -8,14 +8,15 @@ ifdef OS
 	RDATA =.rdata
 	LDM = i386pe
 else
-	GCC =gcc
-	LD =ld
+	GCC =i686-w64-mingw32-gcc
+	LD =i686-w64-mingw32-ld
 	NASM =nasm
-	OBJCOPY =objcopy
-	OBJDUMP =objdump
+	OBJCOPY =i686-w64-mingw32-objcopy
+	OBJDUMP =i686-w64-mingw32-objdump
 	BOOTSIZE =0
-	RDATA =.rodata
-	LDM = elf_i386
+	RDATA =.rdata
+	LDM = i386pe
+
 endif
 
 ifndef NEW_ENTER
