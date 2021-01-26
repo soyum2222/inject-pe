@@ -1,14 +1,11 @@
-typedef unsigned int        DWORD;
-typedef unsigned short      WORD;
-typedef long long           QWORD;
+#include <windows.h>
 
-
-
+typedef long long QWORD;
 
 QWORD findDll(QWORD pebAddr ,char *name);
 DWORD getFuncAddress(char *funcName , QWORD k32Address);
 
-QWORD entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
+QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
 
 	QWORD k32Address = 0 ;
 	char kernelStr[]="KERNEL32.DLL";
@@ -16,29 +13,30 @@ QWORD entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
 
 	char loadLibStr[]="LoadLibraryA";
 	QWORD llibAddr = getFuncAddress(loadLibStr,k32Address);
-	llibAddr+=baseAddress;
+	llibAddr+=k32Address;
 
 	char getProcStr []="GetProcAddress";
 	QWORD gpAddr= getFuncAddress(getProcStr,k32Address);
-	gpAddr+=baseAddress;
+	gpAddr+=k32Address;
 
-    DWORD(*LoadLibraryA)(char*);
-    LoadLibraryA = (DWORD(*)(char*))(llibAddr);
+	//DWORD(*LoadLibraryA)(char*);
+	typedef WINBASEAPI _Ret_maybenull_ HMODULE (WINAPI *LoadLibraryA)(_In_ LPCSTR );
+    LoadLibraryA loadLibraryA= (LoadLibraryA)(llibAddr);
 
-    DWORD(*GetProcAddress)(DWORD,char*);
-    GetProcAddress = (DWORD(*)(DWORD,char*))(gpAddr);
+    typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
+    GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
 
     char userStr[]="User32.dll";
-    DWORD u32dll = LoadLibraryA(userStr);
+    HMODULE u32dll = loadLibraryA(userStr);
 
-    char boxStr[]="MessageBox";
-    QWORD box = GetProcAddress(boxStr,k32Address);
+    char boxStr[]="MessageBoxW";
+    QWORD box = getProcAddress(u32dll,boxStr);
 
-    QWORD (*MessageBox)(int,char *,char *,unsigned int);
-    MessageBox = (QWORD (*)(int,char *,char *,unsigned int))(box);
+    typedef WINUSERAPI int (WINAPI *MessageBoxW)(_In_opt_ HWND hWnd,_In_opt_ LPCWSTR lpText,_In_opt_ LPCWSTR lpCaption,_In_ UINT uType);
+    MessageBoxW messageBoxW = (MessageBoxW)(box);
 
     char lpText[]="inject";
-    MessageBox(0,lpText,lpText,0x00000002L);
+    messageBoxW(0,lpText,lpText,0x00000002L);
 
     return 0;
 }
@@ -107,6 +105,7 @@ QWORD findDll(QWORD pebAddr ,char *name) {
 }
 
 
+/*
 typedef struct _IMAGE_EXPORT_DIRECTORY {
     DWORD   Characteristics;
     DWORD   TimeDateStamp;
@@ -120,6 +119,7 @@ typedef struct _IMAGE_EXPORT_DIRECTORY {
     DWORD   AddressOfNames;         // RVA from base of image
     DWORD   AddressOfNameOrdinals;  // RVA from base of image
 };
+*/
 
 
 

@@ -17,13 +17,13 @@ ifdef OS
 	endif
 
 	ifeq ($(RODATASIZE),)
-		LDFLAG = -Ttext 0x00 -e _entry -o func.bin func.o
+		LDFLAG = -Ttext 0x00 -e entry -o func.bin func.o
 		OBJCOPYFLAG =-O binary -j .text func.bin
 	else
 		HEXTEXESIZE = $(shell  printf %d 0x$(TEXESIZE))
-		RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 16)
+		RODATABEGIN =$(shell expr $(HEXTEXESIZE) + 64)
 		HEXRODATABEGIN = 0x$(shell  printf %x $(RODATABEGIN))
-		LDFLAG = --section-start=.text=0x00 --section-start=.rdata=$(HEXRODATABEGIN) -e _entry -o func.bin func.o
+		LDFLAG = --section-start=.text=0x00 --section-start=.rdata=$(HEXRODATABEGIN) -e entry -o func.bin func.o
 		OBJCOPYFLAG =-O binary -j .text -j .rdata func.bin
 	endif
 
@@ -67,7 +67,7 @@ else
 endif
 
 func:boot.bin
-	$(GCC)  -fno-stack-protector -c -o func.o func.c
+	$(GCC) -fno-stack-protector -fno-pie -m64 -c -o func.o func.c
 	$(LD)  $(LDFLAG)
 	$(OBJCOPY) $(OBJCOPYFLAG)
 
