@@ -40,8 +40,8 @@ DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset){
 
     char boxStr[]="MessageBoxA";
     DWORD box = getProcAddress(u32dll,boxStr);
+
     typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCSTR lpText,_In_opt_ LPCSTR lpCaption,_In_ UINT uType);
-//    typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCWSTR lpText,_In_opt_ LPCWSTR lpCaption,_In_ UINT uType);
     MessageBoxA messageBoxA = (MessageBoxA)(box);
 
     char lpText[]="inject";

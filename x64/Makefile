@@ -48,10 +48,10 @@ boot.bin:
 	$(NASM) -dNEW_ENTER=0xff -dORIGIN_ENTER=0xff -dSIZE=0xff -f bin -o boot.bin boot.asm
 
 func.o:
-	$(GCC) -fno-pie -m32 -c -o func.o func.c
+	$(GCC) -Qn -fno-stack-protector -fno-pie -m64 -c -o func.o func.c
 
 func:boot.bin
-	$(GCC) -fno-stack-protector -fno-pie -m64 -c -o func.o func.c
+	$(GCC) -Qn -fno-stack-protector -fno-pie -m64 -c -o func.o func.c
 	$(LD)  $(LDFLAG)
 	$(OBJCOPY) $(OBJCOPYFLAG)
 
