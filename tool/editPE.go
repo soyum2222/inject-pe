@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"github.com/soyum2222/editPE"
@@ -9,7 +10,6 @@ import (
 )
 
 func main() {
-
 	var (
 		f      string
 		arch   bool
@@ -19,6 +19,7 @@ func main() {
 		e      bool
 		hex    bool
 		ne     bool
+		code   bool
 	)
 
 	flag.StringVar(&f, "f", "", "PE file path")
@@ -27,9 +28,9 @@ func main() {
 	flag.StringVar(&o, "o", "", "out put file path")
 	flag.StringVar(&i, "i", "", "binary file path")
 	flag.BoolVar(&e, "e", false, "entry point")
+	flag.BoolVar(&code, "c", false, "entry point")
 	flag.BoolVar(&hex, "hex", false, "print hexadecimal")
 	flag.BoolVar(&ne, "ne", false, "new entry point")
-
 	flag.Parse()
 
 	if ne {
@@ -82,6 +83,39 @@ func main() {
 		return
 	}
 
+	if code {
+		desFile, err := ioutil.ReadFile(f)
+		if err != nil {
+			panic(err)
+		}
+		pe := editPE.PE{}
+		pe.Parse(desFile)
+		var origin uint32
+		switch pe.ImageNTHeaders.FileHeader.SizeOfOptionalHeader {
+		case editPE.SIZE_OF_OPTIONAL_HEADER_32:
+			origin = pe.ImageOptionalHeader32.AddressOfEntryPoint
+
+		case editPE.SIZE_OF_OPTIONAL_HEADER_64:
+			origin = pe.ImageOptionalHeader64.AddressOfEntryPoint
+		}
+
+		originCode := make([]byte, 5)
+		origin = editPE.RVAToOffset(origin, pe.Raw)
+		for i := origin; i < origin+5; i++ {
+			originCode[i-origin] = pe.Raw[i]
+		}
+
+		if hex {
+			for _, v := range originCode {
+				fmt.Printf("0x%x,", v)
+			}
+		} else {
+			for _, v := range originCode {
+				fmt.Printf("0x%d,", v)
+			}
+		}
+	}
+
 	if inject {
 		desFile, err := ioutil.ReadFile(f)
 		if err != nil {
@@ -119,16 +153,33 @@ func main() {
 				switch pe.ImageNTHeaders.FileHeader.SizeOfOptionalHeader {
 				case editPE.SIZE_OF_OPTIONAL_HEADER_32:
 					origin = pe.ImageOptionalHeader32.AddressOfEntryPoint
-					pe.ImageOptionalHeader32.AddressOfEntryPoint = entry
+					//pe.ImageOptionalHeader32.AddressOfEntryPoint = entry
 				case editPE.SIZE_OF_OPTIONAL_HEADER_64:
 					origin = pe.ImageOptionalHeader64.AddressOfEntryPoint
-					pe.ImageOptionalHeader64.AddressOfEntryPoint = entry
+					//pe.ImageOptionalHeader64.AddressOfEntryPoint = entry
+				}
+
+				jmpOffset := entry - (origin + 0x05)
+
+				code := make([]byte, 4)
+				binary.LittleEndian.PutUint32(code, jmpOffset)
+
+				code = append([]byte{0xe9}, code...)
+				originCode := make([]byte, 5)
+				origin = editPE.RVAToOffset(origin, pe.Raw)
+				for i := origin; i < origin+5; i++ {
+					originCode[i-origin] = pe.Raw[i]
+					pe.Raw[i] = code[i-origin]
 				}
 
 				if hex {
-					fmt.Printf("%x\n", origin)
+					for _, v := range originCode {
+						fmt.Printf("0x%x,", v)
+					}
 				} else {
-					fmt.Println(origin)
+					for _, v := range originCode {
+						fmt.Printf("0x%d,", v)
+					}
 				}
 			}
 		}

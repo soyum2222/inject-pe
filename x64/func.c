@@ -5,7 +5,7 @@ typedef long long QWORD;
 QWORD findDll(QWORD pebAddr ,char *name);
 DWORD getFuncAddress(char *funcName , QWORD k32Address);
 
-QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
+QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset,QWORD originEntry,char * originCode) {
 
 	QWORD k32Address = 0 ;
 	char kernelStr[]="KERNEL32.DLL";
@@ -28,12 +28,20 @@ QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
 	QWORD gpAddr= getFuncAddress(getProcStr,k32Address);
 	gpAddr+=k32Address;
 
-	//DWORD(*LoadLibraryA)(char*);
 	typedef WINBASEAPI _Ret_maybenull_ HMODULE (WINAPI *LoadLibraryA)(_In_ LPCSTR );
     LoadLibraryA loadLibraryA= (LoadLibraryA)(llibAddr);
 
     typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
     GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
+
+	typedef BOOL (WINAPI *VirtualProtect)(_In_  QWORD lpAddress,_In_  QWORD dwSize,_In_  DWORD flNewProtect,_Out_ QWORD lpflOldProtect);
+	char virtualProtectStr[] = "VirtualProtect";
+	QWORD vpAddr = getProcAddress(k32Address,virtualProtectStr);
+	VirtualProtect virtualProtect = (VirtualProtect)(vpAddr);
+	QWORD old;
+	virtualProtect(originEntry+baseAddress,5,0x40,&old);
+
+	recoverCode(originEntry+baseAddress,originCode);
 
     char userStr[]="User32.dll";
     HMODULE u32dll = loadLibraryA(userStr);
@@ -48,6 +56,16 @@ QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset) {
     messageBoxA(0,lpText,lpText,0x00000002L);
 
     return 0;
+}
+
+void recoverCode(QWORD originEntry,char * originCode){
+
+    char *codePtr  = (char *)originEntry;
+
+    for (int i=0;i<5;i++){
+    	// little ending
+        codePtr[i] = originCode[i];
+    }
 }
 
 QWORD findDll(QWORD pebAddr ,char *name) {

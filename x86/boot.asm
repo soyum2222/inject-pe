@@ -12,6 +12,9 @@ BITS 32
 
 	jmp Enter
 
+OC:
+	db ORIGIN_CODE
+	db 0x00
 
 Enter:
 	push        ebp
@@ -31,6 +34,10 @@ Enter:
 	mov         [ebp - 0x0c] , eax
 
     ; do any thing
+    mov         eax , OC
+    add         eax , [ebp - 0x08]
+    push        eax
+    push        ORIGIN_ENTER
 	mov         ebx , [ebp - 0x08]
 	add         ebx , SIZE
 	push        ebx

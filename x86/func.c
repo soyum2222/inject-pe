@@ -5,7 +5,7 @@ typedef unsigned short      WORD;
 DWORD getFuncAddress(char *funcName , DWORD k32Address);
 DWORD findDll(DWORD pebAddr, char *name);
 
-DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset){
+DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset ,DWORD originEntry,char * originCode){
 
     DWORD k32Address = 0 ;
 	char kernelStr[]="KERNEL32.DLL";
@@ -35,6 +35,15 @@ DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset){
     typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
     GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
 
+    typedef BOOL (WINAPI *VirtualProtect)(_In_  DWORD lpAddress,_In_  DWORD dwSize,_In_  DWORD flNewProtect,_Out_ DWORD lpflOldProtect);
+   	char virtualProtectStr[] = "VirtualProtect";
+   	DWORD vpAddr = getProcAddress(k32Address,virtualProtectStr);
+   	VirtualProtect virtualProtect = (VirtualProtect)(vpAddr);
+   	DWORD old;
+   	virtualProtect(originEntry+baseAddress,5,0x40,&old);
+
+   	recoverCode(originEntry+baseAddress,originCode);
+
     char userStr[]="User32.dll";
     HMODULE u32dll = loadLibraryA(userStr);
 
@@ -48,6 +57,16 @@ DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset){
     messageBoxA(0,lpText,lpText,0x00000002L);
 
     return 0;
+}
+
+void recoverCode(DWORD originEntry,char * originCode){
+
+    char *codePtr  = (char *)originEntry;
+
+    for (int i=0;i<5;i++){
+    	// little ending
+        codePtr[i] = originCode[i];
+    }
 }
 
 DWORD findDll(DWORD pebAddr, char *name) {

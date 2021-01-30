@@ -14,6 +14,11 @@ BITS 64
 
 	jmp ENTRY
 
+
+
+OC:
+	db ORIGIN_CODE
+	db 0x00
 ENTRY:
 
 	push        rbp
@@ -31,7 +36,11 @@ ENTRY:
 	mov         [rbp - 0x18] , rax
 
     ; do any thing
-    ; for abi
+    ; for abi]
+	mov         rax , OC
+	add         rax , [rbp-0x10]
+	mov         [rsp+0x20],rax
+    mov 		r9  , ORIGIN_ENTER
 	mov         r8  , qword[rbp - 0x10]
 	mov         rdx , qword[rbp - 0x08]
 	mov         rcx , qword[rbp - 0x18]
