@@ -7,17 +7,17 @@ DWORD findDll(DWORD pebAddr, char *name);
 
 DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset ,DWORD originEntry,char * originCode){
 
-    DWORD k32Address = 0 ;
+	DWORD k32Address = 0 ;
 	char kernelStr[]="KERNEL32.DLL";
 	k32Address = findDll(pebAddr,kernelStr);
 
 	if (k32Address == 0 ){
 		char kernelBaseStr[]="KERNELBASE.DLL";
-    	k32Address = findDll(pebAddr,kernelBaseStr);
+		k32Address = findDll(pebAddr,kernelBaseStr);
 
-    	if (k32Address == 0 ){
- 		   	return 0 ;
-    	}
+		if (k32Address == 0 ){
+			return 0 ;
+		}
 	}
 
 	char loadLibStr[]="LoadLibraryA";
@@ -30,129 +30,129 @@ DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset ,DWORD originEntry,cha
 
 	//DWORD(*LoadLibraryA)(char*);
 	typedef WINBASEAPI _Ret_maybenull_ HMODULE (WINAPI *LoadLibraryA)(_In_ LPCSTR );
-    LoadLibraryA loadLibraryA= (LoadLibraryA)(llibAddr);
+	LoadLibraryA loadLibraryA= (LoadLibraryA)(llibAddr);
 
-    typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
-    GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
+	typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
+	GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
 
-    typedef BOOL (WINAPI *VirtualProtect)(_In_  DWORD lpAddress,_In_  DWORD dwSize,_In_  DWORD flNewProtect,_Out_ DWORD lpflOldProtect);
-   	char virtualProtectStr[] = "VirtualProtect";
-   	DWORD vpAddr = getProcAddress(k32Address,virtualProtectStr);
-   	VirtualProtect virtualProtect = (VirtualProtect)(vpAddr);
-   	DWORD old;
-   	virtualProtect(originEntry+baseAddress,5,0x40,&old);
+	typedef BOOL (WINAPI *VirtualProtect)(_In_  DWORD lpAddress,_In_  DWORD dwSize,_In_  DWORD flNewProtect,_Out_ DWORD lpflOldProtect);
+	char virtualProtectStr[] = "VirtualProtect";
+	DWORD vpAddr = getProcAddress(k32Address,virtualProtectStr);
+	VirtualProtect virtualProtect = (VirtualProtect)(vpAddr);
+	DWORD old;
+	virtualProtect(originEntry+baseAddress,5,0x40,&old);
 
-   	recoverCode(originEntry+baseAddress,originCode);
+	recoverCode(originEntry+baseAddress,originCode);
 
-    char userStr[]="User32.dll";
-    HMODULE u32dll = loadLibraryA(userStr);
+	char userStr[]="User32.dll";
+	HMODULE u32dll = loadLibraryA(userStr);
 
-    char boxStr[]="MessageBoxA";
-    DWORD box = getProcAddress(u32dll,boxStr);
+	char boxStr[]="MessageBoxA";
+	DWORD box = getProcAddress(u32dll,boxStr);
 
-    typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCSTR lpText,_In_opt_ LPCSTR lpCaption,_In_ UINT uType);
-    MessageBoxA messageBoxA = (MessageBoxA)(box);
+	typedef WINUSERAPI int (WINAPI *MessageBoxA)(_In_opt_ HWND hWnd,_In_opt_ LPCSTR lpText,_In_opt_ LPCSTR lpCaption,_In_ UINT uType);
+	MessageBoxA messageBoxA = (MessageBoxA)(box);
 
-    char lpText[]="inject";
-    messageBoxA(0,lpText,lpText,0x00000002L);
+	char lpText[]="inject";
+	messageBoxA(0,lpText,lpText,0x00000002L);
 
-    return 0;
+	return 0;
 }
 
 void recoverCode(DWORD originEntry,char * originCode){
 
-    char *codePtr  = (char *)originEntry;
+	char *codePtr  = (char *)originEntry;
 
-    for (int i=0;i<5;i++){
-    	// little ending
-        codePtr[i] = originCode[i];
-    }
+	for (int i=0;i<5;i++){
+		// little ending
+		codePtr[i] = originCode[i];
+	}
 }
 
 DWORD findDll(DWORD pebAddr, char *name) {
 
-    int nameLen = 0;
+	int nameLen = 0;
 
-    for (int i = 0; name[i] != '\0'; i++) {
-        nameLen++;
-    }
+	for (int i = 0; name[i] != '\0'; i++) {
+		nameLen++;
+	}
 
-    PPEB peb;
-    peb = (PPEB) pebAddr;
+	PPEB peb;
+	peb = (PPEB) pebAddr;
 
-    PPEB_LDR_DATA pldr;
+	PPEB_LDR_DATA pldr;
 
-    pldr = (peb->Ldr);
+	pldr = (peb->Ldr);
 
-    LIST_ENTRY inMemoryOrderModuleList;
+	LIST_ENTRY inMemoryOrderModuleList;
 
-    inMemoryOrderModuleList = pldr->InMemoryOrderModuleList;
+	inMemoryOrderModuleList = pldr->InMemoryOrderModuleList;
 
-    PLIST_ENTRY flink;
-    flink = inMemoryOrderModuleList.Flink;
+	PLIST_ENTRY flink;
+	flink = inMemoryOrderModuleList.Flink;
 
-    for (int loop = 0; loop < 10; loop++) {
+	for (int loop = 0; loop < 10; loop++) {
 
-        PLDR_DATA_TABLE_ENTRY table;
-        table = (PLDR_DATA_TABLE_ENTRY) flink;
+		PLDR_DATA_TABLE_ENTRY table;
+		table = (PLDR_DATA_TABLE_ENTRY) flink;
 
-        short length;
-        length = (short) (table->FullDllName.Length);
+		short length;
+		length = (short) (table->FullDllName.Length);
 
-        char *dllName;
+		char *dllName;
 
-        dllName = (char *) (table->FullDllName.Buffer);
+		dllName = (char *) (table->FullDllName.Buffer);
 
-        if (dllName == 0) {
-            break;
-        }
+		if (dllName == 0) {
+			break;
+		}
 
-        int index = 0;
-        for (int i = 0; i < length; i++) {
+		int index = 0;
+		for (int i = 0; i < length; i++) {
 
-            if (dllName[i] == 0) {
-                continue;
-            }
+			if (dllName[i] == 0) {
+				continue;
+			}
 
-            if (name[index] == dllName[i] ||
-                name[index] == (dllName[i] - ('a' - 'A')) ||
-                name[index] == (dllName[i] + ('a' - 'A'))
-                    ) {
-                index++;
+			if (name[index] == dllName[i] ||
+					name[index] == (dllName[i] - ('a' - 'A')) ||
+					name[index] == (dllName[i] + ('a' - 'A'))
+			   ) {
+				index++;
 
-                if (index == nameLen) {
-                    // find dll
-                    DWORD dllAddr = 0;
+				if (index == nameLen) {
+					// find dll
+					DWORD dllAddr = 0;
 
-                    dllAddr = (DWORD ) (table->Reserved2[0]);
-                    return dllAddr;
-                }
-            } else {
-                break;
-            }
-        }
+					dllAddr = (DWORD ) (table->Reserved2[0]);
+					return dllAddr;
+				}
+			} else {
+				break;
+			}
+		}
 
-        inMemoryOrderModuleList = *(LIST_ENTRY *) (flink->Flink);
-        flink = (inMemoryOrderModuleList.Flink);
-    }
+		inMemoryOrderModuleList = *(LIST_ENTRY *) (flink->Flink);
+		flink = (inMemoryOrderModuleList.Flink);
+	}
 
-    return 0;
+	return 0;
 }
 /*
-typedef struct _IMAGE_EXPORT_DIRECTORY {
-    DWORD   Characteristics;
-    DWORD   TimeDateStamp;
-    WORD    MajorVersion;
-    WORD    MinorVersion;
-    DWORD   Name;
-    DWORD   Base;
-    DWORD   NumberOfFunctions;
-    DWORD   NumberOfNames;
-    DWORD   AddressOfFunctions;     // RVA from base of image
-    DWORD   AddressOfNames;         // RVA from base of image
-    DWORD   AddressOfNameOrdinals;  // RVA from base of image
-};
-*/
+   typedef struct _IMAGE_EXPORT_DIRECTORY {
+   DWORD   Characteristics;
+   DWORD   TimeDateStamp;
+   WORD    MajorVersion;
+   WORD    MinorVersion;
+   DWORD   Name;
+   DWORD   Base;
+   DWORD   NumberOfFunctions;
+   DWORD   NumberOfNames;
+   DWORD   AddressOfFunctions;     // RVA from base of image
+   DWORD   AddressOfNames;         // RVA from base of image
+   DWORD   AddressOfNameOrdinals;  // RVA from base of image
+   };
+   */
 
 
 DWORD getNTHead(DWORD k32Address){
@@ -187,39 +187,39 @@ struct _IMAGE_EXPORT_DIRECTORY * getExportDir(DWORD k32Address){
 DWORD getFuncAddress(char *funcName , DWORD k32Address){
 
 
-    struct _IMAGE_EXPORT_DIRECTORY *export  = getExportDir(k32Address);
+	struct _IMAGE_EXPORT_DIRECTORY *export  = getExportDir(k32Address);
 
-    for (int i=0;i<export->NumberOfFunctions;i++){
+	for (int i=0;i<export->NumberOfFunctions;i++){
 
-        DWORD offset = i*4;
-        offset += export->AddressOfNames;
-        offset += k32Address;
-        offset = *(DWORD *)offset;
-        offset += k32Address;
+		DWORD offset = i*4;
+		offset += export->AddressOfNames;
+		offset += k32Address;
+		offset = *(DWORD *)offset;
+		offset += k32Address;
 
-        char *ent = (char *)(offset);
+		char *ent = (char *)(offset);
 
-        for (int j=0;;j++){
+		for (int j=0;;j++){
 
-            if (funcName[j] != ent[j]){
-                break;
-            }
+			if (funcName[j] != ent[j]){
+				break;
+			}
 
-            if (ent[j]=='\0'){
-                DWORD orderOffset =i*2;
-                orderOffset += export->AddressOfNameOrdinals;
-                orderOffset += k32Address;
+			if (ent[j]=='\0'){
+				DWORD orderOffset =i*2;
+				orderOffset += export->AddressOfNameOrdinals;
+				orderOffset += k32Address;
 
-                WORD num = *(WORD *)orderOffset;
+				WORD num = *(WORD *)orderOffset;
 
-                DWORD funcAddr = num;
-                funcAddr *= 4;
-                funcAddr +=export->AddressOfFunctions;
-                funcAddr += k32Address;
-                funcAddr = *(DWORD *)funcAddr;
-                return funcAddr;
-            }
-        }
-    }
-    return 0;
+				DWORD funcAddr = num;
+				funcAddr *= 4;
+				funcAddr +=export->AddressOfFunctions;
+				funcAddr += k32Address;
+				funcAddr = *(DWORD *)funcAddr;
+				return funcAddr;
+			}
+		}
+	}
+	return 0;
 }
