@@ -38,24 +38,22 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
 		pe := editPE.PE{}
 		pe.Parse(desFile)
 
-		pe.AddSection(".foo", 0x10)
-		for i := 0; i < len(pe.ImageSectionHeaders); i++ {
-			if pe.ImageSectionHeaders[i].Name[0] == '.' &&
-				pe.ImageSectionHeaders[i].Name[1] == 'f' &&
-				pe.ImageSectionHeaders[i].Name[2] == 'o' &&
-				pe.ImageSectionHeaders[i].Name[3] == 'o' {
+		tail := len(pe.ImageSectionHeaders) - 1
 
-				entry := pe.ImageSectionHeaders[i].VirtualAddress
+		pe.ImageSectionHeaders[tail].SizeOfRawData = uint32(len(pe.Raw)) - pe.ImageSectionHeaders[tail].PointerToRawData
+		pe.ImageSectionHeaders[tail].PhysicalAddressOrVirtualSize = pe.ImageSectionHeaders[tail].SizeOfRawData
+		pe.ImageSectionHeaders[tail].Characteristics = pe.ImageSectionHeaders[tail].Characteristics | (1 << 29)
 
-				if hex {
-					fmt.Printf("%x\n", entry)
-				} else {
-					fmt.Println(entry)
-				}
-			}
+		jmpOffset := pe.ImageSectionHeaders[tail].VirtualAddress + pe.ImageSectionHeaders[tail].PhysicalAddressOrVirtualSize
+
+		if hex {
+			fmt.Printf("%x\n", jmpOffset)
+		} else {
+			fmt.Println(jmpOffset)
 		}
 	}
 
@@ -134,53 +132,52 @@ func main() {
 
 		pe := editPE.PE{}
 		pe.Parse(desFile)
-		pe.AddSection(".common", uint32(len(injectFile)))
-		for i := 0; i < len(pe.ImageSectionHeaders); i++ {
-			if pe.ImageSectionHeaders[i].Name[0] == '.' &&
-				pe.ImageSectionHeaders[i].Name[1] == 'c' &&
-				pe.ImageSectionHeaders[i].Name[2] == 'o' &&
-				pe.ImageSectionHeaders[i].Name[3] == 'm' &&
-				pe.ImageSectionHeaders[i].Name[4] == 'm' &&
-				pe.ImageSectionHeaders[i].Name[5] == 'o' &&
-				pe.ImageSectionHeaders[i].Name[6] == 'n' {
 
-				offset := pe.ImageSectionHeaders[i].PointerToRawData
-				copy(pe.Raw[offset:], injectFile)
+		tail := len(pe.ImageSectionHeaders) - 1
+		pe.Raw = append(pe.Raw, injectFile...)
+		pe.Parse(pe.Raw)
 
-				entry := pe.ImageSectionHeaders[i].VirtualAddress
+		var origin uint32
+		switch pe.ImageNTHeaders.FileHeader.SizeOfOptionalHeader {
+		case editPE.SIZE_OF_OPTIONAL_HEADER_32:
+			origin = pe.ImageOptionalHeader32.AddressOfEntryPoint
+		case editPE.SIZE_OF_OPTIONAL_HEADER_64:
+			origin = pe.ImageOptionalHeader64.AddressOfEntryPoint
+		}
 
-				var origin uint32
-				switch pe.ImageNTHeaders.FileHeader.SizeOfOptionalHeader {
-				case editPE.SIZE_OF_OPTIONAL_HEADER_32:
-					origin = pe.ImageOptionalHeader32.AddressOfEntryPoint
-					//pe.ImageOptionalHeader32.AddressOfEntryPoint = entry
-				case editPE.SIZE_OF_OPTIONAL_HEADER_64:
-					origin = pe.ImageOptionalHeader64.AddressOfEntryPoint
-					//pe.ImageOptionalHeader64.AddressOfEntryPoint = entry
-				}
+		//originSize := pe.ImageSectionHeaders[tail].PhysicalAddressOrVirtualSize
+		pe.ImageSectionHeaders[tail].SizeOfRawData = uint32(len(pe.Raw)) - pe.ImageSectionHeaders[tail].PointerToRawData
+		pe.ImageSectionHeaders[tail].PhysicalAddressOrVirtualSize = pe.ImageSectionHeaders[tail].SizeOfRawData
+		pe.ImageSectionHeaders[tail].Characteristics = pe.ImageSectionHeaders[tail].Characteristics | (1 << 29)
 
-				jmpOffset := entry - (origin + 0x05)
+		if pe.ImageOptionalHeader32 != nil {
+			pe.ImageOptionalHeader32.SizeOfImage += 0x2000
+		} else {
+			pe.ImageOptionalHeader64.SizeOfImage += 0x2000
+		}
 
-				code := make([]byte, 4)
-				binary.LittleEndian.PutUint32(code, jmpOffset)
+		//jmpOffset := entry - (origin + 0x05)
+		//jmpOffset := uint32(editPE.Offset2VA(uint32(len(pe.Raw)-len(injectFile)), pe.Raw))
+		jmpOffset := (pe.ImageSectionHeaders[tail].VirtualAddress + pe.ImageSectionHeaders[tail].PhysicalAddressOrVirtualSize) - uint32(len(injectFile))
+		jmpOffset = jmpOffset - (origin + 0x05)
+		code := make([]byte, 4)
+		binary.LittleEndian.PutUint32(code, jmpOffset)
 
-				code = append([]byte{0xe9}, code...)
-				originCode := make([]byte, 5)
-				origin = editPE.RVAToOffset(origin, pe.Raw)
-				for i := origin; i < origin+5; i++ {
-					originCode[i-origin] = pe.Raw[i]
-					pe.Raw[i] = code[i-origin]
-				}
+		code = append([]byte{0xe9}, code...)
+		originCode := make([]byte, 5)
+		origin = editPE.RVAToOffset(origin, pe.Raw)
+		for i := origin; i < origin+5; i++ {
+			originCode[i-origin] = pe.Raw[i]
+			pe.Raw[i] = code[i-origin]
+		}
 
-				if hex {
-					for _, v := range originCode {
-						fmt.Printf("0x%x,", v)
-					}
-				} else {
-					for _, v := range originCode {
-						fmt.Printf("0x%d,", v)
-					}
-				}
+		if hex {
+			for _, v := range code {
+				fmt.Printf("0x%x,", v)
+			}
+		} else {
+			for _, v := range code {
+				fmt.Printf("0x%d,", v)
 			}
 		}
 
