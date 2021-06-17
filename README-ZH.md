@@ -19,7 +19,8 @@
 * GOLANG
 
 
-    如果你是在 windows 上使用这套工具,那么需要使用 `bash cmd` , 比如 `git bash` 因为makefile中会使用到一些shell指令.
+   	如果你是在 windows 上使用这套工具,那么需要使用 `bash cmd` , 比如 `git bash` 因为makefile中会使用到一些shell指令.
+
 
    在终端输入:
 ```
@@ -27,3 +28,15 @@
 ```
     ./PE.exe 是被注入的PE文件.
     完成注入后得到a.exe.
+
+# 编辑func.c
+如果想要加入你自定义的逻辑,可以通过编写func.c文件.入口方法为
+
+`DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset ,DWORD originEntry,char * originCode)`
+
+	pebAddr: windows peb 的首地址
+	baseAddress: 程序运行时的基地址
+	offset: 与基地址的偏移量
+	originEntry: 原始程序的入口地址
+
+注意:编写的代码内存必须在栈上分配.
