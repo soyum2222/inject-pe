@@ -54,21 +54,21 @@ Enter:
 ;;    db "CreateDirectoryA"
 ;;    db 0x00
 ;
-;; Get memory offset
-;getOffsetAddr:
-;    mov         eax , [esp]
-;    sub         eax , [esp + 0x04]
-;    sub         eax , 0x0A
-;    ret         4
-;
-;; get the PE base address on runtime
-;; base address value store in eax
-;getBaseAddr:
-;	mov         eax , [esp]
-;	sub         eax , [esp + 0x04]
-;	sub         eax , NEW_ENTER+0x0A;new entry point +5
-;	ret         4
-;
+; Get memory offset
+getOffsetAddr:
+    mov         eax , [esp]
+    sub         eax , [esp + 0x04]
+    sub         eax , 0x0A
+    ret         4
+
+; get the PE base address on runtime
+; base address value store in eax
+getBaseAddr:
+	mov         eax , [esp]
+	sub         eax , [esp + 0x04]
+	sub         eax , NEW_ENTER+0x0A;new entry point +5
+	ret         4
+
 ;; get kernal32 address
 ;; address store in eax
 ;;GetKernel32Addr:
