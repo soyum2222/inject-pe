@@ -6,10 +6,10 @@ BITS 64
 	call getOffsetAddr
 %endmacro
 
-%macro BaseAddr 0
-	push $
-	call getBaseAddr
-%endmacro
+;%macro BaseAddr 0
+;	push $
+;	call getBaseAddr
+;%endmacro
 
 
 	jmp ENTRY
@@ -25,8 +25,8 @@ ENTRY:
 	mov         rbp , rsp
 	sub         rsp , 0x40
 
-	BaseAddr
-	mov         [rbp - 0x08] , rax
+	; BaseAddr
+	; mov         [rbp - 0x08] , rax
 
 	OFFSET
 	mov         [rbp - 0x10] , rax
@@ -39,11 +39,10 @@ ENTRY:
     ; for abi]
 	mov         rax , OC
 	add         rax , [rbp-0x10]
-	mov         [rsp+0x20],rax
-    mov 		r9  , ORIGIN_ENTER
-	mov         r8  , qword[rbp - 0x10]
-	mov         rdx , qword[rbp - 0x08]
-	mov         rcx , qword[rbp - 0x18]
+	mov         r9 , rax                 ; push originCode
+	mov         r8 , ORIGIN_ENTER        ; push origin enter point
+	mov         rdx , qword[rbp - 0x10]  ; push offset
+	mov         rcx , qword[rbp - 0x18]  ; push PEB address
 	mov         rax , SIZE
 	add         rax , [rbp - 0x10]
 	call        rax
@@ -62,8 +61,8 @@ getOffsetAddr:
 
 ; get the PE base address on runtime
 ; base address value store in eax
-getBaseAddr:
-	mov         rax , [rsp]
-	sub         rax , [rsp + 0x08]
-	sub         rax , NEW_ENTER+0x0A;new entry point +10
-	ret         8
+;getBaseAddr:
+;	mov         rax , [rsp]
+;	sub         rax , [rsp + 0x08]
+;	sub         rax , NEW_ENTER+0x0A;new entry point +10
+;	ret         8

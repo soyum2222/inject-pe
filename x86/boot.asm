@@ -5,10 +5,10 @@ BITS 32
 	call getOffsetAddr
 %endmacro
 
-%macro BaseAddr 0
-	push $
-	call getBaseAddr
-%endmacro
+;%macro BaseAddr 0
+;	push $
+;	call getBaseAddr
+;%endmacro
 
 	jmp Enter
 
@@ -21,8 +21,8 @@ Enter:
 	mov         ebp , esp
 	sub         esp , 0x20
 
-	BaseAddr
-	mov         [ebp - 0x04] , eax
+	;BaseAddr
+	;mov         [ebp - 0x04] , eax
 
 	OFFSET
 	mov         [ebp - 0x08] , eax
@@ -34,13 +34,13 @@ Enter:
     ; do any thing
     mov         eax , OC
     add         eax , [ebp - 0x08]
-    push        eax
-    push        ORIGIN_ENTER
+    push        eax               ; push origin code
+    push        ORIGIN_ENTER      ; push origin entry
 	mov         ebx , [ebp - 0x08]
 	add         ebx , SIZE
-	push        ebx
-	push 		dword[ebp - 0x04]
-	push        dword[ebp - 0x0c]
+	push        ebx               ; push offset
+	;push 		dword[ebp - 0x04] ; push base address
+	push        dword[ebp - 0x0c] ; push PEB address
 	mov         eax , SIZE
 	add         eax , [ebp - 0x08]
 	call        eax
@@ -63,11 +63,11 @@ getOffsetAddr:
 
 ; get the PE base address on runtime
 ; base address value store in eax
-getBaseAddr:
-	mov         eax , [esp]
-	sub         eax , [esp + 0x04]
-	sub         eax , NEW_ENTER+0x0A;new entry point +5
-	ret         4
+;getBaseAddr:
+;	mov         eax , [esp]
+;	sub         eax , [esp + 0x04]
+;	sub         eax , NEW_ENTER+0x0A;new entry point +5
+;	ret         4
 
 ;; get kernal32 address
 ;; address store in eax

