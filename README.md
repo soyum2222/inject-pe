@@ -1,5 +1,7 @@
 # inject-pe
 
+[简体中文](https://github.com/soyum2222/inject-pe/blob/main/README-ZH.md)
+
 # Introduce
 Inject  shellcode in to a PE file 
 
